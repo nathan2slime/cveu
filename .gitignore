@@ -1,8 +1,5 @@
 render/
-__pycache__/
-*.py[cod]
-.venv/
-.uv/
+node_modules/
 *.aux
 *.log
 *.out

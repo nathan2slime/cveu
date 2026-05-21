@@ -1,0 +1,20 @@
+{
+  "name": "cv",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Jhonathan's CV-as-code: TypeScript life data, LaTeX, PDF",
+  "scripts": {
+    "cv": "bun run src/cv/cli.ts",
+    "build": "bun run src/cv/cli.ts build",
+    "tex": "bun run src/cv/cli.ts tex",
+    "lint": "bun run src/cv/cli.ts lint",
+    "refresh-metrics": "bun run src/cv/cli.ts refresh-metrics",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.15",
+    "@types/node": "^22.15.21",
+    "typescript": "^5.8.3"
+  }
+}

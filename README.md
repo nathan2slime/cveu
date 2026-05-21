@@ -1,9 +1,19 @@
 # cv
 
-Cadu's _Curriculum Vitae_ as code.
+Jhonathan's _Curriculum Vitae_ as code.
 
-Latest PDF: see the [latest release](https://github.com/flipbit03/cv/releases/latest).
+Generated PDF: `render/cv.pdf`.
 
 ## Stack
 
-uv, Python 3.14, Pydantic, Jinja2, Click, tectonic 0.16+ (XeLaTeX), newtxtext (Times-like serif).
+Bun, TypeScript, LaTeX, tectonic 0.16+ (XeLaTeX), newtxtext (Times-like serif).
+
+## Commands
+
+```bash
+bun install
+bun run build
+bun run tex
+bun run lint
+bun run refresh-metrics
+```
