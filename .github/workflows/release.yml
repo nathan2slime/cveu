@@ -32,17 +32,22 @@ jobs:
 
       - name: Refresh OSS metrics
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun run refresh-metrics
 
-      - name: Build CV
-        run: bun run build
+      - name: Build bilingual CVs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bun run build:all
 
-      - name: Rename artifact
+      - name: Rename artifacts
         run: |
           mkdir -p dist
           TS=$(date -u +%Y%m%d-%H%M)
-          cp render/cv.pdf "dist/jhonathan-cv-${TS}-${GITHUB_REF_NAME}.pdf"
+          cp render/cv-pt.pdf "dist/jhonathan-cv-pt-${TS}-${GITHUB_REF_NAME}.pdf"
+          cp render/cv-en.pdf "dist/jhonathan-cv-en-${TS}-${GITHUB_REF_NAME}.pdf"
           ls -la dist/
 
       - name: Upload to GitHub Release

@@ -7,10 +7,13 @@ import { spawnSync } from "node:child_process";
 import { compilePdf, writeTex } from "./build.ts";
 import { buildCv } from "./data/index.ts";
 import { enrichProjects, refresh } from "./enrich.ts";
-import { type CV, companyLabel, withOpenSource } from "./models.ts";
+import { type CV, type Locale, companyLabel, withOpenSource } from "./models.ts";
 import { PROJECT_ROOT } from "./render.ts";
 
 type Command = "build" | "tex" | "refresh-metrics" | "lint" | "help";
+type RenderTarget = { readonly locale: Locale; readonly basename: string };
+
+const LOCALES = ["pt", "en"] as const;
 
 function loadCvWithMetrics(forceRefresh = false): CV {
   const cvData = buildCv();
@@ -25,7 +28,7 @@ function main(argv: readonly string[]): void {
         commandBuild(args);
         break;
       case "tex":
-        commandTex();
+        commandTex(args);
         break;
       case "refresh-metrics":
         commandRefreshMetrics();
@@ -49,16 +52,22 @@ function main(argv: readonly string[]): void {
 
 function commandBuild(args: readonly string[]): void {
   if (args.includes("--watch") || args.includes("-w")) {
-    watchLoop();
+    watchLoop(args.filter((arg) => arg !== "--watch" && arg !== "-w"));
     return;
   }
-  const pdf = compilePdf(loadCvWithMetrics(false));
-  console.log(`wrote ${pdf}`);
+  const cvData = loadCvWithMetrics(false);
+  for (const target of renderTargets(args)) {
+    const pdf = compilePdf(cvData, target);
+    console.log(`wrote ${pdf}`);
+  }
 }
 
-function commandTex(): void {
-  const texPath = writeTex(loadCvWithMetrics(false));
-  console.log(`wrote ${texPath}`);
+function commandTex(args: readonly string[]): void {
+  const cvData = loadCvWithMetrics(false);
+  for (const target of renderTargets(args)) {
+    const texPath = writeTex(cvData, target);
+    console.log(`wrote ${texPath}`);
+  }
 }
 
 function commandRefreshMetrics(): void {
@@ -107,7 +116,7 @@ function commandLint(): void {
   console.log(`ok (${cvData.companies.length} companies, ${cvData.openSource.length} OSS projects)`);
 }
 
-function watchLoop(): void {
+function watchLoop(buildArgs: readonly string[]): void {
   const watchDirs = [resolve(PROJECT_ROOT, "templates"), resolve(PROJECT_ROOT, "src/cv")];
   const relevantSuffixes = new Set([".ts", ".j2", ".json"]);
   let timer: NodeJS.Timeout | undefined;
@@ -117,7 +126,7 @@ function watchLoop(): void {
     const timestamp = new Date().toTimeString().slice(0, 8);
     const start = performance.now();
     console.log(color("cyan", `[${timestamp}] -> ${reason}`));
-    const proc = spawnSync(process.execPath, ["run", resolve(PROJECT_ROOT, "src/cv/cli.ts"), "build"], {
+    const proc = spawnSync(process.execPath, ["run", resolve(PROJECT_ROOT, "src/cv/cli.ts"), "build", ...buildArgs], {
       cwd: PROJECT_ROOT,
       encoding: "utf8",
     });
@@ -149,6 +158,37 @@ function watchLoop(): void {
     console.log(color("yellow", "\nstopped"));
     process.exit(0);
   });
+}
+
+function renderTargets(args: readonly string[]): readonly RenderTarget[] {
+  const explicit = parseLocaleSelection(args);
+  if (!explicit) return [{ locale: "pt", basename: "cv" }];
+  if (explicit === "all") {
+    return LOCALES.map((locale) => ({ locale, basename: `cv-${locale}` }));
+  }
+  return [{ locale: explicit, basename: `cv-${explicit}` }];
+}
+
+function parseLocaleSelection(args: readonly string[]): Locale | "all" | undefined {
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--all") return "all";
+    if (arg === "--pt") return "pt";
+    if (arg === "--en") return "en";
+    if (arg?.startsWith("--lang=")) return parseLocale(arg.slice("--lang=".length));
+    if (arg === "--lang") {
+      const value = args[index + 1];
+      if (!value) throw new Error("--lang requires pt, en, or all");
+      return parseLocale(value);
+    }
+  }
+  return undefined;
+}
+
+function parseLocale(value: string): Locale | "all" {
+  if (value === "all") return "all";
+  if (value === "pt" || value === "en") return value;
+  throw new Error(`unsupported language: ${value}. Use pt, en, or all`);
 }
 
 function watchTree(root: string, onChange: (filename: string) => void): ReturnType<typeof watch>[] {
@@ -198,8 +238,11 @@ function printHelp(): void {
   console.log(`Usage: cv <command>
 
 Commands:
-  build [--watch]       Render render/cv.pdf
-  tex                   Write render/cv.tex only
+  build [--watch]       Render render/cv.pdf in Portuguese
+  build --lang en       Render render/cv-en.pdf
+  build --all           Render render/cv-pt.pdf and render/cv-en.pdf
+  tex [--lang pt|en]    Write TeX source for one language
+  tex --all             Write render/cv-pt.tex and render/cv-en.tex
   refresh-metrics       Refresh GitHub OSS metrics cache
   lint                  Validate chronology and data warnings
 `);

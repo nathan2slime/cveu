@@ -7,7 +7,13 @@
   "scripts": {
     "cv": "bun run src/cv/cli.ts",
     "build": "bun run src/cv/cli.ts build",
+    "build:pt": "bun run src/cv/cli.ts build --lang pt",
+    "build:en": "bun run src/cv/cli.ts build --lang en",
+    "build:all": "bun run src/cv/cli.ts build --all",
     "tex": "bun run src/cv/cli.ts tex",
+    "tex:pt": "bun run src/cv/cli.ts tex --lang pt",
+    "tex:en": "bun run src/cv/cli.ts tex --lang en",
+    "tex:all": "bun run src/cv/cli.ts tex --all",
     "lint": "bun run src/cv/cli.ts lint",
     "refresh-metrics": "bun run src/cv/cli.ts refresh-metrics",
     "check": "tsc --noEmit"

@@ -1,24 +1,26 @@
-export type MarkdownText = string;
+export type Locale = "pt" | "en";
+export type LocalizedText = string | Readonly<{ pt: string; en?: string }>;
+export type MarkdownText = LocalizedText;
 
 export interface Personal {
   readonly name: string;
-  readonly title: string;
-  readonly location: string;
+  readonly title: LocalizedText;
+  readonly location: LocalizedText;
   readonly email: string;
   readonly phone?: string;
   readonly github?: string;
   readonly linkedin: string;
   readonly portfolio?: string;
   readonly summary: MarkdownText;
-  readonly epigraph?: string;
-  readonly epigraphAttribution?: string;
+  readonly epigraph?: LocalizedText;
+  readonly epigraphAttribution?: LocalizedText;
 }
 
 export interface Position {
-  readonly title: string;
+  readonly title: LocalizedText;
   readonly start: Date;
   readonly end?: Date;
-  readonly location?: string;
+  readonly location?: LocalizedText;
   readonly remote: boolean;
   readonly description: MarkdownText;
   readonly keywords: readonly string[];
@@ -26,8 +28,8 @@ export interface Position {
 
 export interface Company {
   readonly name: string;
-  readonly displayName?: string;
-  readonly oneLiner?: string;
+  readonly displayName?: LocalizedText;
+  readonly oneLiner?: LocalizedText;
   readonly url?: string;
   readonly positions: readonly Position[];
   readonly hidden: boolean;
@@ -35,21 +37,21 @@ export interface Company {
 
 export interface Education {
   readonly institution: string;
-  readonly degree: string;
-  readonly field?: string;
+  readonly degree: LocalizedText;
+  readonly field?: LocalizedText;
   readonly start?: Date;
   readonly end?: Date;
 }
 
 export interface Language {
-  readonly name: string;
-  readonly proficiency: string;
+  readonly name: LocalizedText;
+  readonly proficiency: LocalizedText;
 }
 
 export interface OpenSourceProject {
   readonly name: string;
   readonly repo: string;
-  readonly tagline: string;
+  readonly tagline: LocalizedText;
   readonly description: MarkdownText;
   readonly keywords: readonly string[];
   readonly order: number;
@@ -65,29 +67,29 @@ export interface CV {
   readonly education: readonly Education[];
   readonly languages: readonly Language[];
   readonly skills: readonly string[];
-  readonly certifications: readonly string[];
+  readonly certifications: readonly LocalizedText[];
   readonly openSource: readonly OpenSourceProject[];
 }
 
 interface PersonalInput {
   readonly name: string;
-  readonly title: string;
-  readonly location: string;
+  readonly title: LocalizedText;
+  readonly location: LocalizedText;
   readonly email: string;
   readonly phone?: string;
   readonly github?: string;
   readonly linkedin: string;
   readonly portfolio?: string;
   readonly summary: MarkdownText;
-  readonly epigraph?: string;
-  readonly epigraphAttribution?: string;
+  readonly epigraph?: LocalizedText;
+  readonly epigraphAttribution?: LocalizedText;
 }
 
 interface PositionInput {
-  readonly title: string;
+  readonly title: LocalizedText;
   readonly start: Date;
   readonly end?: Date;
-  readonly location?: string;
+  readonly location?: LocalizedText;
   readonly remote?: boolean;
   readonly description: MarkdownText;
   readonly keywords?: readonly string[];
@@ -95,8 +97,8 @@ interface PositionInput {
 
 interface CompanyInput {
   readonly name: string;
-  readonly displayName?: string;
-  readonly oneLiner?: string;
+  readonly displayName?: LocalizedText;
+  readonly oneLiner?: LocalizedText;
   readonly url?: string;
   readonly positions: readonly Position[];
   readonly hidden?: boolean;
@@ -104,8 +106,8 @@ interface CompanyInput {
 
 interface EducationInput {
   readonly institution: string;
-  readonly degree: string;
-  readonly field?: string;
+  readonly degree: LocalizedText;
+  readonly field?: LocalizedText;
   readonly start?: Date;
   readonly end?: Date;
 }
@@ -113,7 +115,7 @@ interface EducationInput {
 interface OpenSourceProjectInput {
   readonly name: string;
   readonly repo: string;
-  readonly tagline: string;
+  readonly tagline: LocalizedText;
   readonly description: MarkdownText;
   readonly keywords?: readonly string[];
   readonly order?: number;
@@ -139,6 +141,19 @@ export function dedentStrip(value: string): string {
   return lines.map((line) => line.slice(minIndent)).join("\n").trim();
 }
 
+export function localize(value: LocalizedText, locale: Locale): string {
+  if (typeof value === "string") return value;
+  return value[locale] ?? value.pt;
+}
+
+function mapLocalized(value: LocalizedText, transform: (item: string) => string): LocalizedText {
+  if (typeof value === "string") return transform(value);
+  return freezeClean({
+    pt: transform(value.pt),
+    ...(value.en ? { en: transform(value.en) } : {}),
+  });
+}
+
 export function personal(input: PersonalInput): Personal {
   assertEmail(input.email);
   return Object.freeze({
@@ -150,7 +165,7 @@ export function personal(input: PersonalInput): Personal {
     ...(input.github ? { github: assertHttpUrl(input.github) } : {}),
     linkedin: assertHttpUrl(input.linkedin),
     ...(input.portfolio ? { portfolio: assertHttpUrl(input.portfolio) } : {}),
-    summary: dedentStrip(input.summary),
+    summary: mapLocalized(input.summary, dedentStrip),
     ...(input.epigraph ? { epigraph: input.epigraph } : {}),
     ...(input.epigraphAttribution ? { epigraphAttribution: input.epigraphAttribution } : {}),
   });
@@ -163,7 +178,7 @@ export function position(input: PositionInput): Position {
   return freezeClean({
     ...input,
     remote: input.remote ?? false,
-    description: dedentStrip(input.description),
+    description: mapLocalized(input.description, dedentStrip),
     keywords: Object.freeze([...(input.keywords ?? [])]),
   });
 }
@@ -183,7 +198,7 @@ export function education(input: EducationInput): Education {
   return freezeClean(input);
 }
 
-export function language(name: string, proficiency: string): Language {
+export function language(name: LocalizedText, proficiency: LocalizedText): Language {
   return Object.freeze({ name, proficiency });
 }
 
@@ -192,7 +207,7 @@ export function openSourceProject(input: OpenSourceProjectInput): OpenSourceProj
     name: input.name,
     repo: input.repo,
     tagline: input.tagline,
-    description: dedentStrip(input.description),
+    description: mapLocalized(input.description, dedentStrip),
     keywords: Object.freeze([...(input.keywords ?? [])]),
     order: input.order ?? 100,
     ...(input.language ? { language: input.language } : {}),
@@ -214,8 +229,8 @@ export function cv(input: CV): CV {
   });
 }
 
-export function companyLabel(company: Company): string {
-  return company.displayName ?? company.name;
+export function companyLabel(company: Company, locale: Locale = "pt"): string {
+  return company.displayName ? localize(company.displayName, locale) : company.name;
 }
 
 export function latestEnd(company: Company): Date {

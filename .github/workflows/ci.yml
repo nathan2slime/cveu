@@ -32,3 +32,22 @@ jobs:
 
       - name: CV lint
         run: bun run lint
+
+      - name: Install tectonic
+        run: |
+          cd /tmp
+          curl --proto '=https' --tlsv1.2 -fsSL https://drop-sh.fullyjustified.net | sh
+          sudo mv tectonic /usr/local/bin/
+          tectonic -V || tectonic --help | head -3
+
+      - name: Build bilingual PDFs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bun run build:all
+
+      - name: Build default Portuguese PDF
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bun run build

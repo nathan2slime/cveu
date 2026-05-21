@@ -38,6 +38,10 @@ function cacheIsFresh(cache: CacheFile): boolean {
   return (now().getTime() - fetchedAt) / 1000 < CACHE_TTL_SECONDS;
 }
 
+function cacheHasRepos(cache: CacheFile, repos: readonly string[]): boolean {
+  return repos.every((repo) => cache.repos[repo] !== undefined);
+}
+
 function fetchOne(repo: string): Metric {
   const gh = spawnSync("which", ["gh"], { encoding: "utf8" });
   if (gh.status !== 0) throw new Error("gh CLI not found. Install with: brew install gh");
@@ -73,7 +77,7 @@ export function refresh(repos: readonly string[]): CacheFile {
 
 export function loadOrRefresh(repos: readonly string[], force = false): CacheFile {
   const cache = loadCache();
-  if (cache && !force && cacheIsFresh(cache)) return cache;
+  if (cache && !force && cacheIsFresh(cache) && cacheHasRepos(cache, repos)) return cache;
   if (force || !cache) return refresh(repos);
   try {
     return refresh(repos);
